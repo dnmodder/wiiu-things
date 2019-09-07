@@ -10,6 +10,17 @@ import sys
 import zlib
 from urllib.request import urlretrieve, urlopen
 
+import aria2p
+
+# initialization, these are the default values
+aria2 = aria2p.API(
+    aria2p.Client(
+        host="http://localhost",
+        port=6800,
+        secret=""
+    )
+)
+
 if len(sys.argv) == 1:
     print('wiiu_cdndownload.py <titleid> [version]')
     print('Latest version is downloaded, if no version is specified.')
@@ -43,6 +54,8 @@ def roundup(x, base=64):
 # http://stackoverflow.com/questions/13881092/download-progressbar-for-python-3
 blocksize = 10 * 1024
 
+def queqe_download(uri, dir_, out):
+    aria2.add_uris([uri], {'continue': True, 'dir': dir_, 'out': out})
 
 def download(url, printprogress=False, outfile=None, message_prefix='', message_suffix=''):
     cn = urlopen(url)
@@ -105,11 +118,20 @@ with open(tid + '/title.cert', 'wb') as f:
     f.write(zlib.decompress(base64.b64decode(titlecert)))
 
 for c in contents:
-    if os.path.isfile(tid + '/' + c[0] + '.app') and os.path.getsize(tid + '/' + c[0] + '.app') == c[2]:
+    uri = os.path.join(base, c[0])
+    dir_ = os.path.join(os.getcwd(), tid)
+    print(uri)
+    print(dir_)
+
+    if os.path.isfile(tid + '/' + c[0] + '.app.aria2') and os.path.getsize(tid + '/' + c[0] + '.app') == c[2]:
         print('Skipping {}.app due to existing file with proper size'.format(c[0]))
     else:
-        with open(tid + '/' + c[0] + '.app', 'wb') as f:
-            download(base + '/' + c[0], True, f, 'Downloading: {}.app...'.format(c[0]), '({}) MiB)'.format(c[2] / (1024 ** 2)))
+        out = c[0] + '.app'
+        queqe_download(uri, dir_, out)
+        # with open(tid + '/' + c[0] + '.app', 'wb') as f:
+        #     download(base + '/' + c[0], True, f, 'Downloading: {}.app...'.format(c[0]), '({}) MiB)'.format(c[2] / (1024 ** 2)))
     if c[1] & 0x2:
-        with open(tid + '/' + c[0] + '.h3', 'wb') as f:
-            download(base + '/' + c[0] + '.h3', True, f, 'Downloading: {}.h3...'.format(c[0]))
+        out = c[0] + '.h3'
+        queqe_download(uri + '.h3', dir_, out)
+        # with open(tid + '/' + c[0] + '.h3', 'wb') as f:
+        #     download(base + '/' + c[0] + '.h3', True, f, 'Downloading: {}.h3...'.format(c[0]))
